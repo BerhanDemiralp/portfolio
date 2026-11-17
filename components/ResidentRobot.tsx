@@ -96,9 +96,8 @@ export default function ResidentRobot(props: Props) {
     let wakeSeatedPose = 1;
     let greetingStart: number | null = null;
     greet.current = () => {
-      const stationary = touch.matches || pageWidth < 641;
       if (!position || !controls.current.enabled || reduce.matches ||
-          (!stationary && (action === "sleep" || action === "wake" || destination?.id === "home")) ||
+          action === "sleep" || action === "wake" || destination?.id === "home" ||
           greetingStart !== null) return;
       greetingStart = time;
       velocity = { x: 0, y: 0 };
@@ -215,9 +214,9 @@ export default function ResidentRobot(props: Props) {
           ? anchor.querySelector(".experience-mark") : null;
         const headingBounds = heading && boundsOf(heading);
         const plusBounds = plus && boundsOf(plus);
-        const beforePlus = plusBounds
+        const beforePlus = plusBounds?.width
           ? [{ x: plusBounds.left - width * .83 - 10, y: r.bottom - height * .91 - 8 }]
-          : [];
+          : [{ x: r.right - width, y: r.bottom - height * .93 }];
         const candidates: Record<string, Point[]> = {
           "hero-name": [
             { x: r.right - width * .65, y: r.bottom - height * .93 },
@@ -335,7 +334,9 @@ export default function ResidentRobot(props: Props) {
     }
 
     function plan(dt: number) {
-      const { enabled, target } = controls.current;
+      const { enabled } = controls.current;
+      const canInspectCards = !touch.matches && pageWidth >= 641;
+      const target = canInspectCards ? controls.current.target : null;
       const elapsed = time - actionStart;
       if (!enabled) {
         if (destination?.id !== "home" && action !== "sleep") {
@@ -385,6 +386,16 @@ export default function ResidentRobot(props: Props) {
         intro = "done";
         setAction("idle");
         waitUntil = time;
+      }
+
+      if (!canInspectCards && cardVisit) {
+        destination = null;
+        velocity = { x: 0, y: 0 };
+        walk = 0;
+        run = 0;
+        setAction("idle");
+        resumeTour();
+        return;
       }
 
       if (resume && !cardVisit) {
@@ -502,7 +513,7 @@ export default function ResidentRobot(props: Props) {
       let remaining = Math.max(0, (now - lastFrame) / 1000);
       lastFrame = Math.max(lastFrame, now);
       if (dirty) measure();
-      const still = reduce.matches || touch.matches || pageWidth < 641;
+      const still = reduce.matches;
       const renderDt = Math.min(remaining, .04);
 
       // Timers and frames can be throttled in background tabs. Replay the

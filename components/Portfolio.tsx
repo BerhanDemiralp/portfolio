@@ -133,7 +133,8 @@ export default function Portfolio() {
                   }
                 }}
                 data-project-theme={project.slug}
-                onMouseEnter={() => {
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== "mouse" || !matchMedia("(min-width: 641px) and (pointer: fine)").matches) return;
                   clearHover();
                   const cardId = `card-${index}`;
                   if (runningToCard.current) {
